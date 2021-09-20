@@ -12,12 +12,9 @@
 #define READ_END 0
 #define WRITE_END 1
 
-void closePipe(int* pipefd) {
-	close(pipefd[0]);
-	close(pipefd[1]);
-}
+void closePipe(int* pipefd); 
 
-int main(int argc,char** argv) {
+int main(/*int argc,char** argv*/) {
 	int pipefd1[2];
 	int pipefd2[2];
 	long int buf = -1;		
@@ -25,13 +22,13 @@ int main(int argc,char** argv) {
 
 
 	if (pipe(pipefd1) < 0) {
-		fprintf(stderr,"error en la creacion del pipe\n");
+		perror("error en la creacion del pipe");
 		exit(EXIT_FAILURE);
 	}
 	
 	if (pipe(pipefd2) < 0) {
 		closePipe(pipefd1);
-		fprintf(stderr,"error en la creacion del pipe\n");
+		perror("error en la creacion del pipe");
 		exit(EXIT_FAILURE);
 	}
 
@@ -43,7 +40,7 @@ int main(int argc,char** argv) {
 	if (cpid < 0) {
 		closePipe(pipefd1);
 		closePipe(pipefd2);
-		fprintf(stderr,"error en fork\n");
+		perror("error en fork\n");
 		exit(EXIT_FAILURE);
 	}
 	
@@ -88,7 +85,7 @@ int main(int argc,char** argv) {
 
 		int valueWrite =  write(pipefd1[WRITE_END],&rand,sizeof(rand));
 		if (valueWrite < 0) {
-			printf("proceso padre: error en la escritura");
+			perror("proceso padre: error en la escritura");
 			close(pipefd1[WRITE_END]);
 			close(pipefd2[READ_END]);
 			exit(EXIT_FAILURE);
@@ -114,3 +111,7 @@ int main(int argc,char** argv) {
 	exit(EXIT_SUCCESS);
 }
 
+void closePipe(int* pipefd) {
+	close(pipefd[0]);
+	close(pipefd[1]);
+}
