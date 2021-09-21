@@ -9,12 +9,13 @@
 
 int
 main(int argc, char *argv[]) {
-    // Your code here
-	if (argc < 2)
+	if (argc < 2) {
 		perror("cantidad de parametros incorrecta");
+		_exit(-1);
+	}
 	pid_t cpid;
-    int pipeRight[2];
-    int pipeLeft[2];
+    int pipeRight[2] = {-1,-1};
+    int pipeLeft[2] = {-1,-1};
 
 	if (pipe(pipeLeft) == -1) {
         perror("error en pipe");
@@ -29,44 +30,72 @@ main(int argc, char *argv[]) {
 
 	if (cpid == 0) {
 		//child process
-		close(pipeLeft[WRITE_END]);
-		cpid = fork();
-		fprintf(stdout,"child process running\n");
-		unsigned int prime = 0;
-		read(pipeLeft[READ_END],&prime,sizeof(unsigned int));
-		fprintf(stdout,"%d\n",prime);
-		fflush(stdout);
+		while(true) {
+			close(pipeLeft[WRITE_END]);
+			unsigned int prime = 0;
+			int val = read(pipeLeft[READ_END],&prime,sizeof(unsigned int));
+			if (val < 0) {
+				perror("error en read");
+				_exit(-1);
+			} else if (val == 0) {
+				close(pipeLeft[READ_END]);
+				_exit(0);
+			}
 
-		unsigned int n = 0;
-		while (read(pipeLeft[READ_END],&n,sizeof(unsigned int)) > 0) {
-			if (n % prime != 0) {
-				write(pipeRight[WRITE_END],&n,sizeof(unsigned int));
+			fprintf(stdout,"%d\n",prime);
+			fflush(stdout);
+
+			if(pipeRight[READ_END] > 0 && pipeRight[WRITE_END] > 0) {
+				close(pipeRight[READ_END]);
+				close(pipeRight[WRITE_END]);
+			}
+
+			if (pipe(pipeRight) == -1) {
+				perror("error en pipe");
+				_exit(-1);
+			}
+
+			cpid = fork();
+			if (cpid < 0) {
+				perror("error en fork\n");
+				_exit(-1);
+			}
+
+			if (cpid == 0) {
+				close(pipeLeft[READ_END]);
+				pipeLeft[READ_END] = pipeRight[READ_END];
+				pipeLeft[WRITE_END] = pipeRight[WRITE_END];
+				pipeRight[READ_END] = -1;
+				pipeRight[WRITE_END] = -1;
+			} else {
+				unsigned int n = 0;
+				while (read(pipeLeft[READ_END],&n,sizeof(unsigned int)) > 0) {
+					if (n % prime != 0) {
+						if(write(pipeRight[WRITE_END],&n,sizeof(unsigned int)) < 0) {
+							perror("error en write");
+							_exit(-1);
+						}
+					}
+				}
+
+				close(pipeLeft[READ_END]);
+				close(pipeRight[WRITE_END]);
+				wait(NULL);
+				_exit(0);
 			}
 		}
-
-		close(pipeLeft[READ_END]);
-		close(pipeRight[WRITE_END]);
-		wait(NULL);
-		_exit(0);
 	} else {
 		close(pipeLeft[READ_END]);
-		//parent process
-		fprintf(stdout,"parent process running\n");
-		fflush(stdout);
 		unsigned int n = atoi(argv[1]);
-		bool error  = false;
-		for (unsigned int i = 2; (i <= n && !error); i++) {
+		for (unsigned int i = 2; i <= n; i++) {
 			if(write(pipeLeft[WRITE_END],&i,sizeof(unsigned int)) < 0) {
 				perror("error en write");
-				error = true;
+				_exit(-1);
 			}
 		}
+
 		close(pipeLeft[WRITE_END]);
-		
 		wait(NULL);
-		if (error) {
-			_exit(-1);
-		}
 		_exit(0);
 	}	
 }
