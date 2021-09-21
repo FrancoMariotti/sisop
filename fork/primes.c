@@ -14,13 +14,13 @@ main(int argc, char *argv[]) {
 		_exit(-1);
 	}
 	pid_t cpid;
-    int pipeRight[2] = {-1,-1};
-    int pipeLeft[2] = {-1,-1};
+	int pipeRight[2] = {-1,-1};
+	int pipeLeft[2] = {-1,-1};
 
 	if (pipe(pipeLeft) == -1) {
-        perror("error en pipe");
-        _exit(-1);
-    }
+		perror("error en pipe");
+		_exit(-1);
+	}
 
 	cpid = fork();
 	if (cpid == -1) {
@@ -44,11 +44,6 @@ main(int argc, char *argv[]) {
 
 			fprintf(stdout,"%d\n",prime);
 			fflush(stdout);
-
-			if(pipeRight[READ_END] > 0 && pipeRight[WRITE_END] > 0) {
-				close(pipeRight[READ_END]);
-				close(pipeRight[WRITE_END]);
-			}
 
 			if (pipe(pipeRight) == -1) {
 				perror("error en pipe");
