@@ -19,8 +19,8 @@ int
 main(int argc, char *argv[]) {
 	int opt;
 	cmp_t ptr_cmp  = &strstr;
-    while ((opt = getopt(argc, argv, "i")) != -1) {
-    	switch (opt) {
+	while ((opt = getopt(argc, argv, "i")) != -1) {
+		switch (opt) {
 			case 'i':
 				ptr_cmp = &strcasestr;
 				break;
@@ -28,33 +28,32 @@ main(int argc, char *argv[]) {
 				fprintf(stderr, "Usage: %s [-i] pattern\n",
 						argv[0]);
 				_exit(EXIT_FAILURE);
-        }
-    }
+		}
+	}
         
-    if (optind >= argc) {
-        perror("Expected argument after options");
-        _exit(EXIT_FAILURE);
-    }
+	if (optind >= argc) {
+		perror("Expected argument after options");
+		_exit(EXIT_FAILURE);
+	}
 
-    char* cadena = argv[optind];
+	char* cadena = argv[optind];
 	char path[MAX_PATH];
 	memset(path,0,MAX_PATH);
-    DIR* folder = opendir(ROOT_DIRECTORY);
-    if (!folder) {
+	DIR* folder = opendir(ROOT_DIRECTORY);
+	if (!folder) {
 		perror("error en opendir");
 		_exit(EXIT_FAILURE);
-    }
+	}
 
 	printOcurrencies(folder,path,cadena,ptr_cmp);
 	closedir(folder);
-    _exit(EXIT_SUCCESS);
+	_exit(EXIT_SUCCESS);
 }
 
 
 void printOcurrencies(DIR* folder,char* path,char* pattern,cmp_t cmp) {
 	struct dirent *entry;
-    while ((entry = readdir(folder))) {
-
+	while ((entry = readdir(folder))) {
 		if (entry->d_type == DT_REG) {
 			char* ret = cmp(entry->d_name,pattern);
 			if (ret) {
@@ -64,8 +63,24 @@ void printOcurrencies(DIR* folder,char* path,char* pattern,cmp_t cmp) {
 			if(strncmp(entry->d_name,ROOT_DIRECTORY,1) == 0 || strncmp(entry->d_name,PREVIOUS_DIRECTORY,2) == 0)
 				continue;
 			int fdRoot = dirfd(folder);
+			if (fdRoot == -1){
+				perror("error en dirfd");
+				continue;
+			}
+
 			int fdSubdir = openat(fdRoot,entry->d_name,O_DIRECTORY);
+			if (fdSubdir == -1){
+				perror("error en openat");
+				continue;
+			}
+
 			DIR* subdir = fdopendir(fdSubdir);
+			if (!subdir){
+				close(fdSubdir);
+				perror("error en fdopendir");
+				continue;
+			}
+
 			strncat(path,entry->d_name,MAX_PATH-strlen(path)-1);
 			strncat(path,SEPARADOR,MAX_PATH-strlen(path)-1);
 			printOcurrencies(subdir,path,pattern,cmp);
