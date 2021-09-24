@@ -11,7 +11,7 @@ int
 main(int argc, char *argv[]) {
 	if (argc < 2) {
 		perror("cantidad de parametros incorrecta");
-		_exit(-1);
+		_exit(EXIT_FAILURE);
 	}
 	pid_t cpid;
 	int pipeRight[2] = {-1,-1};
@@ -25,7 +25,7 @@ main(int argc, char *argv[]) {
 	cpid = fork();
 	if (cpid == -1) {
 		perror("error en fork");
-		_exit(-1);
+		_exit(EXIT_FAILURE);
 	}
 
 	if (cpid == 0) {
@@ -36,10 +36,10 @@ main(int argc, char *argv[]) {
 			int val = read(pipeLeft[READ_END],&prime,sizeof(unsigned int));
 			if (val < 0) {
 				perror("error en read");
-				_exit(-1);
+				_exit(EXIT_FAILURE);
 			} else if (val == 0) {
 				close(pipeLeft[READ_END]);
-				_exit(0);
+				_exit(EXIT_SUCCESS);
 			}
 
 			fprintf(stdout,"%d\n",prime);
@@ -47,13 +47,13 @@ main(int argc, char *argv[]) {
 
 			if (pipe(pipeRight) == -1) {
 				perror("error en pipe");
-				_exit(-1);
+				_exit(EXIT_FAILURE);
 			}
 
 			cpid = fork();
 			if (cpid < 0) {
 				perror("error en fork\n");
-				_exit(-1);
+				_exit(EXIT_FAILURE);
 			}
 
 			if (cpid == 0) {
@@ -68,15 +68,18 @@ main(int argc, char *argv[]) {
 					if (n % prime != 0) {
 						if(write(pipeRight[WRITE_END],&n,sizeof(unsigned int)) < 0) {
 							perror("error en write");
-							_exit(-1);
+							_exit(EXIT_FAILURE);
 						}
 					}
 				}
 
 				close(pipeLeft[READ_END]);
 				close(pipeRight[WRITE_END]);
-				wait(NULL);
-				_exit(0);
+				if (wait(NULL) == -1) {
+					perror("error en wait");
+					_exit(EXIT_FAILURE);
+				}
+				_exit(EXIT_SUCCESS);
 			}
 		}
 	} else {
@@ -85,13 +88,16 @@ main(int argc, char *argv[]) {
 		for (unsigned int i = 2; i <= n; i++) {
 			if(write(pipeLeft[WRITE_END],&i,sizeof(unsigned int)) < 0) {
 				perror("error en write");
-				_exit(-1);
+				_exit(EXIT_FAILURE);
 			}
 		}
 
 		close(pipeLeft[WRITE_END]);
-		wait(NULL);
-		_exit(0);
+		if (wait(NULL) == -1) {
+			perror("error en wait");
+			_exit(EXIT_FAILURE);
+		}
+		_exit(EXIT_SUCCESS);
 	}	
 }
 

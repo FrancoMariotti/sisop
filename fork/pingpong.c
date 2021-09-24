@@ -3,11 +3,13 @@
  *
  * */
 
-#include "stdio.h"
-#include "stdlib.h"
-#include "unistd.h"
-#include "sys/types.h"
-#include "time.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <time.h>
+#include <sys/wait.h>
+
 
 #define READ_END 0
 #define WRITE_END 1
@@ -23,13 +25,13 @@ int main(/*int argc,char** argv*/) {
 
 	if (pipe(pipefd1) < 0) {
 		perror("error en la creacion del pipe");
-		exit(EXIT_FAILURE);
+		_exit(EXIT_FAILURE);
 	}
 	
 	if (pipe(pipefd2) < 0) {
 		closePipe(pipefd1);
 		perror("error en la creacion del pipe");
-		exit(EXIT_FAILURE);
+		_exit(EXIT_FAILURE);
 	}
 
 	printf("Hola, soy PID %d:\n",getpid());	
@@ -41,7 +43,7 @@ int main(/*int argc,char** argv*/) {
 		closePipe(pipefd1);
 		closePipe(pipefd2);
 		perror("error en fork\n");
-		exit(EXIT_FAILURE);
+		_exit(EXIT_FAILURE);
 	}
 	
 	printf("Donde fork me devuelve %d:\n"
@@ -58,7 +60,7 @@ int main(/*int argc,char** argv*/) {
 			perror("proceso hijo: error en read");
 			close(pipefd1[READ_END]);
 			close(pipefd2[WRITE_END]);
-			exit(EXIT_FAILURE);
+			_exit(EXIT_FAILURE);
 		} 
 
 		printf("\t-recibo valor %ld via fd=%d\n"
@@ -71,7 +73,7 @@ int main(/*int argc,char** argv*/) {
 		
 		if (valueWrite < 0) {
 			perror("proceso hijo: error en write");
-			exit(EXIT_FAILURE);
+			_exit(EXIT_FAILURE);
 		}
 	} else {
 		close(pipefd1[READ_END]); //cierro el extremo de lectura del pipe 1
@@ -88,7 +90,7 @@ int main(/*int argc,char** argv*/) {
 			perror("proceso padre: error en la escritura");
 			close(pipefd1[WRITE_END]);
 			close(pipefd2[READ_END]);
-			exit(EXIT_FAILURE);
+			_exit(EXIT_FAILURE);
 		} 
 
 		int valueRead = read(pipefd2[READ_END],&buf,sizeof(buf));
@@ -96,7 +98,7 @@ int main(/*int argc,char** argv*/) {
 			perror("proceso padre: error en read");
 			close(pipefd1[WRITE_END]);
 			close(pipefd2[READ_END]);
-			exit(EXIT_FAILURE);
+			_exit(EXIT_FAILURE);
 		} 
 
 		printf("Hola, de nuevo PID %d:\n"
@@ -105,10 +107,13 @@ int main(/*int argc,char** argv*/) {
 		
 		close(pipefd1[WRITE_END]); //cierro extremo de escritura del pipe 1
 		close(pipefd2[READ_END]); //cierro el extremo de lectura del pipe 2
+		if (wait(NULL) == -1) {
+			perror("error en wait");
+			_exit(EXIT_FAILURE);
+		}                /* Wait for child */
 	}
 
-
-	exit(EXIT_SUCCESS);
+	_exit(EXIT_SUCCESS);
 }
 
 void closePipe(int* pipefd) {
